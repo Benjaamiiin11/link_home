@@ -47,8 +47,7 @@ async def global_exception_handler(request, exc):
     if isinstance(exc, SQLAlchemyError):
         error_detail = "数据库错误: " + str(exc)
     
-    print(f"错误: {error_detail}")
-    print(traceback.format_exc())
+    pass  # 错误已记录在响应中
     
     return JSONResponse(
         status_code=500,
@@ -65,10 +64,9 @@ async def global_exception_handler(request, exc):
 # 初始化数据库（延迟初始化，避免启动时错误）
 try:
     Base.metadata.create_all(bind=engine)
-    print("数据库表创建成功")
+    pass
 except Exception as e:
-    print(f"数据库初始化警告: {e}")
-    print("将在首次请求时重试")
+    pass  # 将在首次请求时重试
 
 API_PREFIX = os.getenv("API_PREFIX", "/api/v1")
 
@@ -82,8 +80,7 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         users = crud.get_users(db, skip=skip, limit=limit)
         return users
     except Exception as e:
-        print(f"获取用户列表错误: {e}")
-        print(traceback.format_exc())
+        pass
         raise HTTPException(status_code=500, detail=f"获取用户列表失败: {str(e)}")
 
 @app.get(API_PREFIX + "/users/{user_id}", response_model=schemas.UserResponse)

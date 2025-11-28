@@ -14,6 +14,8 @@ class LinkPortalAPI {
      */
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        const timeout = options.timeout || 3000; // 默认3秒超时
+        
         const config = {
             headers: {
                 'Content-Type': 'application/json',
@@ -26,8 +28,14 @@ class LinkPortalAPI {
             config.body = JSON.stringify(config.body);
         }
 
+        // 添加超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        config.signal = controller.signal;
+
         try {
             const response = await fetch(url, config);
+            clearTimeout(timeoutId);
             
             // 204 No Content 响应
             if (response.status === 204) {
@@ -41,6 +49,10 @@ class LinkPortalAPI {
 
             return await response.json();
         } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('请求超时');
+            }
             console.error('API 请求错误:', error);
             throw error;
         }

@@ -28,19 +28,35 @@ const API_BASE_URL = 'http://localhost:8081/api/v1'; // 根据你的后端端口
 let api = null; // API 实例
 let useBackendAPI = false; // 是否使用后端 API（自动检测）
 
-// 初始化 API
+// 初始化 API（快速失败，1秒超时）
 async function initAPI() {
     if (typeof LinkPortalAPI !== 'undefined') {
         try {
             api = new LinkPortalAPI(API_BASE_URL);
-            // 测试连接（等待完成）
+            // 快速测试连接（1秒超时）
             try {
-                await api.getUsers();
-                useBackendAPI = true;
-                console.log('已连接到后端 API');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1000);
+                
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    useBackendAPI = true;
+                    console.log('已连接到后端 API');
+                } else {
+                    useBackendAPI = false;
+                    console.log('后端 API 响应异常，使用 localStorage');
+                }
             } catch (error) {
                 useBackendAPI = false;
-                console.log('后端 API 不可用，使用 localStorage:', error.message);
+                if (error.name === 'AbortError') {
+                    console.log('后端 API 连接超时，使用 localStorage');
+                } else {
+                    console.log('后端 API 不可用，使用 localStorage:', error.message);
+                }
             }
         } catch (e) {
             console.error('API 初始化失败:', e);
@@ -54,46 +70,66 @@ async function initAPI() {
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
-    // 初始化 API（等待完成）
-    await initAPI();
-    
-    // 初始化用户系统（必须在最前面，因为后续加载需要使用用户前缀）
-    await initializeUserSystem();
-    
-    // 从本地存储或后端加载数据
-    await loadLinksOrder();
-    await loadCustomCategories();
-    loadCategoryFolders();
-    await loadFavoriteLinks();
-    loadDarkMode();
-    loadAllTags();
-    loadCustomTheme();
-    await loadAccessHistory();
-    
-    // 确保数据已加载（数据应该从数据库或 localStorage 加载）
-    if (!allLinks || allLinks.length === 0) {
-        console.warn('allLinks 为空，数据可能尚未加载');
+    // 显示加载状态
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'flex';
     }
     
-    initializeCategories();
-    setupViewToggle(); // 先设置视图切换，再渲染
-    renderLinks();
-    setupSearch();
-    setupDragAndDrop();
-    setupModal();
-    setupBatchMode();
-    setupUserManagement(); // 设置用户管理
-    setupSort();
-    loadSortSettings();
-    setupThemeToggle();
-    setupThemeColor();
-    setupKeyboardShortcuts();
-    setupTagClick();
-    setupQuickAdd();
-    setupShareLinks();
-    setupAccessHistory();
-    setupPasteImport(); // 设置粘贴导入
-    showContextMenu = setupContextMenu(); // 设置右键菜单
+    try {
+        // 初始化 API（快速失败）
+        await initAPI();
+        
+        // 初始化用户系统（必须在最前面，因为后续加载需要使用用户前缀）
+        await initializeUserSystem();
+        
+        // 并行加载不相互依赖的数据
+        await Promise.all([
+            loadLinksOrder(),
+            loadCustomCategories(),
+            loadFavoriteLinks(),
+            loadAccessHistory()
+        ]);
+        
+        // 同步加载（依赖前面的数据或不需要异步）
+        loadCategoryFolders();
+        loadDarkMode();
+        loadAllTags();
+        loadCustomTheme();
+        
+        // 确保数据已加载（数据应该从数据库或 localStorage 加载）
+        if (!allLinks || allLinks.length === 0) {
+            console.warn('allLinks 为空，数据可能尚未加载');
+        }
+        
+        // 渲染和设置
+        initializeCategories();
+        setupViewToggle(); // 先设置视图切换，再渲染
+        renderLinks();
+        setupSearch();
+        setupDragAndDrop();
+        setupModal();
+        setupBatchMode();
+        setupUserManagement(); // 设置用户管理
+        setupSort();
+        loadSortSettings();
+        setupThemeToggle();
+        setupThemeColor();
+        setupKeyboardShortcuts();
+        setupTagClick();
+        setupQuickAdd();
+        setupShareLinks();
+        setupAccessHistory();
+        setupPasteImport(); // 设置粘贴导入
+        showContextMenu = setupContextMenu(); // 设置右键菜单
+    } catch (error) {
+        console.error('初始化失败:', error);
+    } finally {
+        // 隐藏加载状态
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+    }
 });
 
 // 初始化分类（支持文件夹系统）
@@ -468,13 +504,24 @@ function renderCardView() {
                  data-all-index="${allLinksIndex}"
                  draggable="${!batchMode}"
                  style="animation-delay: ${index * 0.05}s">
-                <button class="favorite-btn ${favoriteLinks.has(link.url) ? 'active' : ''}" 
-                        data-url="${link.url}"
-                        title="${favoriteLinks.has(link.url) ? '取消收藏' : '收藏'}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="${favoriteLinks.has(link.url) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                    </svg>
-                </button>
+                <div class="favorite-container">
+                    <button class="favorite-btn ${favoriteLinks.has(link.url) ? 'active' : ''}" 
+                            data-url="${link.url}"
+                            title="${favoriteLinks.has(link.url) ? '取消收藏' : '收藏'}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="${favoriteLinks.has(link.url) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                    </button>
+                    ${(link.clicks || link.clickCount) ? `
+                    <div class="view-count-display" title="访问次数：${link.clicks || link.clickCount || 0}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span>${link.clicks || link.clickCount || 0}</span>
+                    </div>
+                    ` : ''}
+                </div>
                 ${batchMode ? `
                 <div class="batch-checkbox">
                     <input type="checkbox" class="link-checkbox" data-url="${link.url}" ${isSelected ? 'checked' : ''}>
@@ -515,10 +562,6 @@ function renderCardView() {
                     <span>私有</span>
                 </div>` : ''}
                 <div class="link-url">${getDomain(link.url)}</div>
-                <div class="link-stats">
-                    ${(link.clicks || link.clickCount) ? `<span class="stat-item" title="访问次数"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> ${link.clicks || link.clickCount || 0}</span>` : ''}
-                    ${(link.lastAccess || link.lastAccessTime) ? `<span class="stat-item" title="最后访问：${formatAccessTime(link.lastAccess || link.lastAccessTime)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> ${formatRelativeTime(link.lastAccess || link.lastAccessTime)}</span>` : ''}
-                </div>
             </div>
         `;
     }).join('');
@@ -1004,7 +1047,6 @@ async function fetchWebsiteInfo(url) {
             }
         } catch (fetchError) {
             // 如果获取失败，只返回基本信息
-            console.log('无法获取Open Graph数据，使用默认信息');
         }
         
         return info;
@@ -2386,7 +2428,6 @@ async function saveLink() {
             } else {
                 // 添加模式
                 const createdLink = await api.createLink(currentUserId, linkData);
-                console.log('链接创建成功:', createdLink);
                 showNotification('链接已添加', 'success');
             }
             // 重新加载链接列表
@@ -3002,7 +3043,6 @@ function resetToDefaultData() {
     // 如果使用后端API，也需要清空数据库数据
     if (useBackendAPI && api && currentUserId) {
         // 这里可以添加清空数据库的逻辑，或者提示用户
-        console.warn('使用后端API时，需要手动清空数据库数据');
     }
     
     initializeCategories();
@@ -3053,17 +3093,13 @@ async function initializeUserSystem() {
         try {
             // 从后端获取用户列表
             users = await api.getUsers();
-            console.log('从后端加载用户列表:', users);
             if (users.length === 0) {
                 // 创建默认用户
-                console.log('创建默认用户...');
                 const defaultUser = await api.createUser('默认用户');
                 users = [defaultUser];
-                console.log('默认用户创建成功:', defaultUser);
             }
             // 使用第一个用户
             currentUserId = users[0].id;
-            console.log('当前用户ID:', currentUserId);
             api.setCurrentUserId(currentUserId);
             updateUserUI();
             return;
@@ -3072,7 +3108,6 @@ async function initializeUserSystem() {
             console.error('错误详情:', error.message || error.toString());
             // 只有在明确是连接错误时才回退
             if (error.message && error.message.includes('fetch')) {
-                console.log('网络连接失败，切换到 localStorage');
                 useBackendAPI = false;
             } else {
                 // 其他错误（如服务器错误）不立即回退，让用户知道问题
@@ -3127,7 +3162,6 @@ function migrateOldData() {
     
     // 如果存在旧数据且当前用户没有数据，则迁移
     if (oldLinksData && !userLinksData) {
-        console.log('检测到旧数据，正在迁移到当前用户...');
         const oldKeys = ['linksData', 'linksOrder', 'customCategories', 'favoriteLinks', 
                         'accessHistory', 'allTags', 'categoryFolders'];
         
@@ -3202,8 +3236,6 @@ window.deleteUser = async function(userId, event) {
         event.stopPropagation();
     }
     
-    console.log('删除用户，userId:', userId, '类型:', typeof userId);
-    console.log('当前用户列表:', users);
     
     if (users.length <= 1) {
         showNotification('至少需要保留一个用户', 'error');
@@ -3231,17 +3263,13 @@ window.deleteUser = async function(userId, event) {
     
     if (useBackendAPI && api) {
         try {
-            console.log('调用API删除用户，userId:', userIdNum);
             await api.deleteUser(userIdNum);
-            console.log('API删除成功');
             
             // 从用户列表中删除（使用多种ID匹配方式）
-            const beforeCount = users.length;
             users = users.filter(u => {
                 const uId = typeof u.id === 'string' ? parseInt(u.id, 10) : u.id;
                 return uId !== userIdNum && u.id !== userId && u.id !== userIdNum;
             });
-            console.log('删除前用户数:', beforeCount, '删除后用户数:', users.length);
             
             // 如果删除的是当前用户，切换到第一个用户
             const currentUserIdNum = typeof currentUserId === 'string' ? parseInt(currentUserId, 10) : currentUserId;
@@ -3258,10 +3286,9 @@ window.deleteUser = async function(userId, event) {
                 const updatedUsers = await api.getUsers();
                 if (updatedUsers && updatedUsers.length > 0) {
                     users = updatedUsers;
-                    console.log('重新加载用户列表成功，用户数:', users.length);
                 }
             } catch (e) {
-                console.warn('重新加载用户列表失败，使用本地数据:', e);
+                console.error('重新加载用户列表失败:', e);
             }
             
             renderUserList();
@@ -3291,7 +3318,6 @@ window.deleteUser = async function(userId, event) {
         const uId = typeof u.id === 'string' ? parseInt(u.id, 10) : u.id;
         return uId !== userIdNum && u.id !== userId && u.id !== userIdNum;
     });
-    console.log('localStorage删除前用户数:', beforeCount, '删除后用户数:', users.length);
     saveUsers();
     
     // 如果删除的是当前用户，切换到第一个用户
@@ -4050,7 +4076,6 @@ async function saveFavoriteLinks() {
             await api.updateUserSettings(currentUserId, {
                 favorite_links: Array.from(favoriteLinks)
             });
-            console.log('收藏链接已保存到数据库');
         } catch (error) {
             console.error('保存收藏链接到数据库失败:', error);
             // 不抛出错误，因为 localStorage 已经保存了
@@ -4316,16 +4341,13 @@ function applyCustomThemeOnChange() {
 // 应用主题颜色
 function applyThemeColors() {
     if (customTheme) {
-        console.log('应用主题颜色:', customTheme);
         document.documentElement.style.setProperty('--primary-color', customTheme.primaryColor);
         document.documentElement.style.setProperty('--primary-hover', adjustBrightness(customTheme.primaryColor, -10));
         document.body.style.background = `linear-gradient(135deg, ${customTheme.gradientStart} 0%, ${customTheme.gradientEnd} 100%)`;
         document.body.style.backgroundAttachment = 'fixed';
         document.body.style.backgroundSize = 'cover';
-        console.log('主题颜色已应用');
     } else {
         // 重置为默认
-        console.log('重置为默认主题');
         document.documentElement.style.removeProperty('--primary-color');
         document.documentElement.style.removeProperty('--primary-hover');
         document.body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
@@ -4645,15 +4667,6 @@ function showKeyboardShortcutsHelp() {
 }
 
 // 添加快捷键帮助到控制台（用于调试）
-console.log('%c快捷键提示', 'color: #6366f1; font-weight: bold; font-size: 16px;');
-console.log('Ctrl/Cmd + K: 聚焦搜索框');
-console.log('Ctrl/Cmd + N: 添加新链接');
-console.log('Ctrl/Cmd + B: 切换批量模式');
-console.log('Ctrl/Cmd + D: 切换深色模式');
-console.log('Ctrl/Cmd + E: 导出数据');
-console.log('Ctrl/Cmd + G: 切换视图');
-console.log('Esc: 关闭模态框/退出批量模式');
-console.log('1-9: 切换到对应分类');
 
 // 记录链接访问
 async function recordLinkAccess(url) {
@@ -4678,7 +4691,6 @@ async function recordLinkAccess(url) {
         if (useBackendAPI && api && currentUserId && link.id) {
             try {
                 await api.clickLink(currentUserId, link.id);
-                console.log('链接点击已记录到数据库');
             } catch (error) {
                 console.error('记录链接点击失败:', error);
             }
@@ -4714,7 +4726,6 @@ async function addToAccessHistory(url, name) {
     if (useBackendAPI && api && currentUserId) {
         try {
             await api.createAccessHistory(currentUserId, url, name);
-            console.log('访问历史已保存到数据库');
         } catch (error) {
             console.error('保存访问历史到数据库失败:', error);
             // 不抛出错误，因为 localStorage 已经保存了

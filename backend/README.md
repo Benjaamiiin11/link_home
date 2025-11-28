@@ -1,8 +1,7 @@
 # 链接门户后端 API
 
 基于 FastAPI 和 MySQL 的链接管理系统后端。
-uvicorn main:app --reload --host 0.0.0.0 --port 8081
-http-server -p 3001 -c-1 --cors
+
 ## 📋 功能特性
 
 - ✅ 用户管理（创建、查询、删除）
@@ -54,18 +53,7 @@ DB_NAME=link_portal
 
 ### 4. 运行应用
 
-**方式一：使用启动脚本（推荐）**
-
-```bash
-# Windows
-start.bat
-
-# Linux/Mac
-chmod +x start.sh
-./start.sh
-```
-
-**方式二：手动启动**
+**启动服务**
 
 ```bash
 # 开发模式（自动重载）
@@ -94,7 +82,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8081
 - ReDoc: http://localhost:8081/redoc
 - 健康检查: http://localhost:8081/health
 
-**注意：** 如果无法访问，请确保服务已启动。查看 [启动说明.md](./启动说明.md) 获取详细帮助。
+**注意：** 如果无法访问，请确保服务已启动。
 
 ## 📚 API 接口说明
 
@@ -201,8 +189,9 @@ backend/
 ├── models.py         # SQLAlchemy 数据模型
 ├── schemas.py        # Pydantic 数据模式
 ├── crud.py           # 数据库操作函数
-├── requirements.txt   # Python 依赖
-├── .env.example      # 环境变量示例
+├── init_db.py        # 数据库初始化脚本
+├── requirements.txt  # Python 依赖
+├── env.example       # 环境变量示例
 └── README.md         # 说明文档
 ```
 
