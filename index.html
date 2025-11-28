@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链接门户 - Link Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS库用于Excel导入导出 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="title">我的链接门户</h1>
+                <p class="subtitle">快速访问常用网站</p>
+            </div>
+            <div class="header-right">
+                <button class="user-switch-btn" id="userSwitchBtn" title="切换用户">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span id="currentUserName">用户</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="搜索链接..." class="search-input">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+        </div>
+
+        <div class="categories" id="categories">
+            <button class="category-btn favorite-filter" id="favoriteFilterBtn" data-category="收藏">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+                收藏
+            </button>
+        </div>
+
+        <div class="action-bar">
+            <button class="add-btn" id="addLinkBtn" title="添加新链接">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                添加链接
+            </button>
+            <div class="quick-add-dropdown">
+                <button class="add-btn quick-add-btn" id="quickAddBtn" title="快速添加">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="quick-add-menu" id="quickAddMenu" style="display: none;">
+                    <button class="quick-add-item" id="quickAddFromClipboard">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        </svg>
+                        从剪贴板添加
+                    </button>
+                    <button class="quick-add-item" id="quickAddCurrentPage">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        添加当前页面
+                    </button>
+                    <button class="quick-add-item" id="quickImportBookmarks">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        导入浏览器书签
+                    </button>
+                </div>
+            </div>
+            <button class="manage-btn" id="manageCategoriesBtn" title="管理分类">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M2 12h20"></path>
+                    <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+                管理分类
+            </button>
+            <button class="data-btn" id="manageDataBtn" title="数据管理">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                数据管理
+            </button>
+            <button class="share-btn" id="shareLinksBtn" title="分享链接">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                分享
+            </button>
+            <div class="view-toggle">
+                <button class="view-toggle-btn active" id="cardViewBtn" data-view="card" title="卡片视图">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </button>
+                <button class="view-toggle-btn" id="listViewBtn" data-view="list" title="列表视图">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <button class="batch-btn" id="batchModeBtn" title="批量操作">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 11 12 14 22 4"></polyline>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                批量操作
+            </button>
+            <div class="sort-controls">
+                <select id="sortSelect" class="sort-select" title="排序方式">
+                    <option value="custom">自定义排序</option>
+                    <option value="name">按名称</option>
+                    <option value="category">按分类</option>
+                    <option value="time">按添加时间</option>
+                    <option value="favorite">收藏优先</option>
+                    <option value="clicks">按访问次数</option>
+                    <option value="lastAccess">按最后访问</option>
+                </select>
+                <button class="sort-order-btn" id="sortOrderBtn" title="切换排序顺序">
+                    <svg id="sortOrderIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </button>
+            </div>
+            <div class="theme-controls">
+                <button class="theme-toggle-btn" id="themeToggleBtn" title="切换深色模式">
+                    <svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+                <button class="theme-color-btn" id="themeColorBtn" title="自定义主题颜色">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+                        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+                        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+                        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 批量操作工具栏 -->
+        <div class="batch-toolbar" id="batchToolbar" style="display: none;">
+            <div class="batch-info">
+                <span>已选择 <strong id="selectedCount">0</strong> 项</span>
+            </div>
+            <div class="batch-actions">
+                <button class="batch-action-btn" id="selectAllBtn">全选</button>
+                <button class="batch-action-btn" id="selectNoneBtn">取消全选</button>
+                <button class="batch-action-btn" id="batchDeleteBtn">批量删除</button>
+                <button class="batch-action-btn" id="batchChangeCategoryBtn">批量修改分类</button>
+                <button class="batch-action-btn" id="batchChangeTagsBtn">批量修改标签</button>
+                <button class="batch-action-btn" id="batchSetShareBtn">批量设置分享</button>
+                <button class="batch-action-btn" id="batchExportBtn">导出选中</button>
+                <button class="batch-action-btn batch-cancel-btn" id="cancelBatchBtn">取消</button>
+            </div>
+        </div>
+
+        <main class="links-container">
+            <div class="links-grid" id="linksGrid">
+                <!-- 链接卡片将通过JavaScript动态生成 -->
+            </div>
+            <div class="links-list" id="linksList" style="display: none;">
+                <!-- 链接列表将通过JavaScript动态生成 -->
+            </div>
+        </main>
+
+        <!-- 右键菜单 -->
+        <div class="context-menu" id="contextMenu" style="display: none;">
+            <div class="context-menu-item" id="contextOpenLink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                在新标签页打开
+            </div>
+            <div class="context-menu-item" id="contextCopyLink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                复制链接
+            </div>
+            <div class="context-menu-item" id="contextCopyMarkdown">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                复制为Markdown
+            </div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" id="contextEditLink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                编辑
+            </div>
+            <div class="context-menu-item" id="contextToggleFavorite">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+                <span id="contextFavoriteText">收藏</span>
+            </div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item context-menu-danger" id="contextDeleteLink">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                删除
+            </div>
+        </div>
+
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 8v4"></path>
+                <path d="M12 16h.01"></path>
+            </svg>
+            <p>未找到匹配的链接</p>
+        </div>
+    </div>
+
+    <!-- 添加/编辑链接模态框 -->
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">添加链接</h2>
+                <button class="modal-close" id="closeModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="linkForm" class="modal-form">
+                <div class="form-group">
+                    <label for="linkName">名称 *</label>
+                    <input type="text" id="linkName" required placeholder="例如：GitHub">
+                </div>
+                <div class="form-group">
+                    <label for="linkUrl">网址 *</label>
+                    <input type="url" id="linkUrl" required placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label for="linkIcon">图标URL（可选）</label>
+                    <input type="url" id="linkIcon" placeholder="https://example.com/favicon.ico">
+                    <small>留空将自动获取网站图标，或输入URL后自动填充</small>
+                </div>
+                <div class="form-group">
+                    <label for="linkNote">备注（可选）</label>
+                    <textarea id="linkNote" rows="3" placeholder="链接的简要说明"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="linkCategory">分类</label>
+                    <input type="text" id="linkCategory" placeholder="例如：开发工具" list="categoryDatalist">
+                    <datalist id="categoryDatalist"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="linkTags">标签（多个标签用逗号分隔）</label>
+                    <input type="text" id="linkTags" placeholder="例如：前端,React,工具">
+                    <small>多个标签用逗号或空格分隔</small>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="linkPrivate" checked>
+                        <span>允许分享（取消勾选后，此链接将不会出现在分享列表中）</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="cancelBtn">取消</button>
+                    <button type="submit" class="btn-submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <button class="modal-close" id="closeDeleteModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除链接 <strong id="deleteLinkName"></strong> 吗？</p>
+                <p class="delete-warning">此操作无法撤销。</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelDeleteBtn">取消</button>
+                <button type="button" class="btn-delete" id="confirmDeleteBtn">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分类管理模态框 -->
+    <div class="modal-overlay" id="categoryManageModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>分类管理</h2>
+                <button class="modal-close" id="closeCategoryModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="category-manage-actions">
+                    <button class="add-category-btn" id="addCategoryBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        添加分类
+                    </button>
+                </div>
+                <div class="category-list" id="categoryManageList">
+                    <!-- 分类列表将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/重命名分类模态框 -->
+    <div class="modal-overlay" id="renameCategoryModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="categoryModalTitle">添加分类</h2>
+                <button class="modal-close" id="closeRenameCategoryModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="renameCategoryForm" class="modal-form">
+                <div class="form-group">
+                    <label for="newCategoryName">分类名称 *</label>
+                    <input type="text" id="newCategoryName" required placeholder="输入分类名称">
+                </div>
+                <div class="form-group">
+                    <label for="categoryParent">父分类（可选，创建文件夹）</label>
+                    <select id="categoryParent" class="form-select">
+                        <option value="">无（顶级分类）</option>
+                    </select>
+                    <small>选择父分类后，此分类将成为子分类（文件夹）</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="cancelRenameBtn">取消</button>
+                    <button type="submit" class="btn-submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 数据管理模态框 -->
+    <div class="modal-overlay" id="dataManageModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>数据管理</h2>
+                <button class="modal-close" id="closeDataModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="data-info">
+                    <div class="info-item">
+                        <span class="info-label">链接数量：</span>
+                        <span class="info-value" id="linksCount">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">分类数量：</span>
+                        <span class="info-value" id="categoriesCount">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">数据大小：</span>
+                        <span class="info-value" id="dataSize">0 KB</span>
+                    </div>
+                </div>
+                
+                <div class="stats-section" style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 20px; color: var(--text-primary);">统计信息</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary-color);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="totalClicks">0</div>
+                                <div class="stat-label">总访问次数</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="favoriteCount">0</div>
+                                <div class="stat-label">收藏链接</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="validLinksCount">0</div>
+                                <div class="stat-label">有效链接</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="tagsCount">0</div>
+                                <div class="stat-label">标签数量</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="top-links-section" style="margin-top: 30px;">
+                        <h3 style="margin-bottom: 15px; color: var(--text-primary);">最常用链接</h3>
+                        <div id="topLinksList" class="top-links-list">
+                            <!-- 将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <div class="category-stats-section" style="margin-top: 30px;">
+                        <h3 style="margin-bottom: 15px; color: var(--text-primary);">分类分布</h3>
+                        <div id="categoryStatsList" class="category-stats-list">
+                            <!-- 将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="data-actions">
+                    <div class="action-section">
+                        <h3>导出数据</h3>
+                        <p class="section-desc">将您的所有数据导出为文件，用于备份或迁移</p>
+                        <div class="export-options">
+                            <button class="action-primary-btn" id="exportJsonBtn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                导出为JSON
+                            </button>
+                            <button class="action-primary-btn" id="exportExcelBtn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                导出为Excel
+                            </button>
+                            <button class="action-primary-btn" id="exportMarkdownBtn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                导出为Markdown
+                            </button>
+                            <button class="action-primary-btn" id="exportHtmlBookmarkBtn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                导出为HTML书签
+                            </button>
+                            <button class="action-primary-btn" id="exportCsvBtn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                导出为CSV
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="action-section">
+                        <h3>链接去重</h3>
+                        <p class="section-desc">检测并合并重复的链接（忽略协议、www等差异）</p>
+                        <button class="action-primary-btn" id="checkDuplicatesBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="9" cy="9" r="5"></circle>
+                                <circle cx="15" cy="15" r="5"></circle>
+                                <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
+                            检测重复链接
+                        </button>
+                        <small style="display: block; margin-top: 8px; color: var(--text-tertiary);">
+                            系统会自动检测相似的URL并提示合并
+                        </small>
+                    </div>
+                    
+                    <div class="action-section">
+                        <h3>导入数据</h3>
+                        <p class="section-desc">从文件恢复数据（支持JSON和Excel格式，会覆盖当前数据）</p>
+                        <label for="importFileInput" class="action-primary-btn file-input-label">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            选择文件导入
+                            <input type="file" id="importFileInput" accept=".json,.xlsx,.xls,.txt,.csv,.md" style="display: none;">
+                        </label>
+                        <button class="action-primary-btn" id="importTextBtn" style="margin-top: 8px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            从文本导入
+                        </button>
+                        <small style="display: block; margin-top: 8px; color: var(--text-tertiary);">
+                            支持格式：JSON (.json)、Excel (.xlsx, .xls)、文本 (.txt)、CSV (.csv)、Markdown (.md)
+                        </small>
+                    </div>
+                    
+                    <div class="action-section danger-section">
+                        <h3>危险操作</h3>
+                        <p class="section-desc">这些操作无法撤销，请谨慎使用</p>
+                        <button class="action-danger-btn" id="resetDataBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            重置为默认数据
+                        </button>
+                        <button class="action-danger-btn" id="clearDataBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            清空所有数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量修改分类模态框 -->
+    <div class="modal-overlay" id="batchCategoryModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>批量修改分类</h2>
+                <button class="modal-close" id="closeBatchCategoryModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="batchCategoryForm" class="modal-form">
+                <div class="form-group">
+                    <label for="batchCategorySelect">选择新分类</label>
+                    <select id="batchCategorySelect" class="form-select">
+                        <option value="未分类">未分类</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="cancelBatchCategoryBtn">取消</button>
+                    <button type="submit" class="btn-submit">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 删除分类模态框 -->
+    <div class="modal-overlay" id="deleteCategoryModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>删除分类</h2>
+                <button class="modal-close" id="closeDeleteCategoryModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>分类 <strong id="deleteCategoryName"></strong> 包含 <strong id="deleteCategoryCount"></strong> 个链接。</p>
+                <p>请选择处理方式：</p>
+                <div class="form-group">
+                    <label for="mergeToCategory">合并到分类（或设为"未分类"）</label>
+                    <select id="mergeToCategory" class="form-select">
+                        <option value="未分类">未分类</option>
+                    </select>
+                </div>
+                <p class="delete-warning">此操作无法撤销。</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelDeleteCategoryBtn">取消</button>
+                <button type="button" class="btn-delete" id="confirmDeleteCategoryBtn">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量设置分享模态框 -->
+    <div class="modal-overlay" id="batchShareModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>批量设置分享</h2>
+                <button class="modal-close" id="closeBatchShareModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="batchShareForm" class="modal-form">
+                <div class="form-group">
+                    <label>分享设置</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="shareSetting" value="allow" checked>
+                            <span>允许分享（默认）</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="shareSetting" value="private">
+                            <span>不允许分享（私有）</span>
+                        </label>
+                    </div>
+                    <small>选中的链接将设置为指定的分享状态</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="cancelBatchShareBtn">取消</button>
+                    <button type="submit" class="btn-submit">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 自定义主题颜色模态框 -->
+    <div class="modal-overlay" id="themeColorModal">
+        <div class="modal-content modal-medium">
+            <div class="modal-header">
+                <h2>自定义主题颜色</h2>
+                <button class="modal-close" id="closeThemeColorModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="theme-presets">
+                    <h3>预设主题</h3>
+                    <div class="preset-themes" id="presetThemes">
+                        <button class="preset-theme" data-theme="default" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <span>默认</span>
+                        </button>
+                        <button class="preset-theme" data-theme="blue" style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);">
+                            <span>蓝色</span>
+                        </button>
+                        <button class="preset-theme" data-theme="green" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <span>绿色</span>
+                        </button>
+                        <button class="preset-theme" data-theme="red" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <span>红色</span>
+                        </button>
+                        <button class="preset-theme" data-theme="orange" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <span>橙色</span>
+                        </button>
+                        <button class="preset-theme" data-theme="purple" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                            <span>紫色</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="theme-custom">
+                    <h3>自定义颜色</h3>
+                    <div class="form-group">
+                        <label for="customPrimaryColor">主色调</label>
+                        <input type="color" id="customPrimaryColor" value="#6366f1">
+                    </div>
+                    <div class="form-group">
+                        <label for="customGradientStart">渐变起始色</label>
+                        <input type="color" id="customGradientStart" value="#667eea">
+                    </div>
+                    <div class="form-group">
+                        <label for="customGradientEnd">渐变结束色</label>
+                        <input type="color" id="customGradientEnd" value="#764ba2">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" id="resetThemeBtn">重置为默认</button>
+                    </div>
+                    <div class="theme-hint">
+                        <small>💡 提示：选择颜色后将自动应用，无需点击按钮</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 书签导入文件输入（隐藏） -->
+    <input type="file" id="bookmarkFileInput" accept=".html" style="display: none;">
+
+    <!-- 用户管理模态框 -->
+    <div class="modal-overlay" id="userManageModal">
+        <div class="modal-content modal-medium">
+            <div class="modal-header">
+                <h2>用户管理</h2>
+                <button class="modal-close" id="closeUserManageModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="user-list-section">
+                    <h3>用户列表</h3>
+                    <div id="userList" class="user-list">
+                        <!-- 用户列表将在这里动态生成 -->
+                    </div>
+                </div>
+                <div class="add-user-section">
+                    <h3>添加新用户</h3>
+                    <form id="addUserForm" class="user-form">
+                        <div class="form-group">
+                            <label for="newUserName">用户名</label>
+                            <input type="text" id="newUserName" class="form-input" placeholder="请输入用户名" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-submit">添加用户</button>
+                            <button type="button" class="btn-cancel" id="cancelAddUser">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 封装（用于连接后端） -->
+    <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
