@@ -3188,9 +3188,14 @@ function saveCurrentUserId() {
 }
 
 // 添加用户
-async function addUser(name) {
+async function addUser(name, password) {
     if (!name || name.trim() === '') {
         showNotification('用户名不能为空', 'error');
+        return false;
+    }
+    
+    if (!password || password.length < 6) {
+        showNotification('密码长度至少为6位', 'error');
         return false;
     }
     
@@ -3202,19 +3207,20 @@ async function addUser(name) {
     
     if (useBackendAPI && api) {
         try {
-            const newUser = await api.createUser(name.trim());
+            const newUser = await api.createUser(name.trim(), password);
             users.push(newUser);
+            saveUsers();
             renderUserList();
             showNotification(`用户 "${name}" 已添加`, 'success');
             return true;
         } catch (error) {
             console.error('创建用户失败:', error);
             showNotification('创建用户失败: ' + (error.message || '未知错误'), 'error');
-            useBackendAPI = false;
+            return false;
         }
     }
     
-    // 使用 localStorage（原有逻辑）
+    // 使用 localStorage（原有逻辑，但密码无法存储）
     const newUser = {
         id: 'user_' + Date.now(),
         name: name.trim(),
@@ -3224,8 +3230,77 @@ async function addUser(name) {
     users.push(newUser);
     saveUsers();
     renderUserList();
-    showNotification(`用户 "${name}" 已添加`, 'success');
+    showNotification(`用户 "${name}" 已添加（注意：localStorage 模式不支持密码）`, 'success');
     return true;
+}
+
+// 用户登录
+async function loginUser(name, password) {
+    if (!name || !password) {
+        showNotification('请输入用户名和密码', 'error');
+        return false;
+    }
+    
+    if (useBackendAPI && api) {
+        try {
+            const result = await api.login(name, password);
+            if (result.success && result.user) {
+                // 检查用户是否在列表中
+                let user = users.find(u => u.id === result.user.id || u.name === result.user.name);
+                if (!user) {
+                    users.push(result.user);
+                    saveUsers();
+                }
+                currentUserId = result.user.id;
+                api.setCurrentUserId(currentUserId);
+                saveCurrentUserId();
+                updateUserUI();
+                showNotification('登录成功', 'success');
+                return true;
+            } else {
+                showNotification(result.message || '登录失败', 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('登录失败:', error);
+            showNotification('登录失败: ' + (error.message || '未知错误'), 'error');
+            return false;
+        }
+    } else {
+        showNotification('后端API不可用，无法登录', 'error');
+        return false;
+    }
+}
+
+// 用户注册
+async function registerUser(name, password) {
+    if (!name || name.trim()) {
+        showNotification('用户名不能为空', 'error');
+        return false;
+    }
+    
+    if (!password || password.length < 6) {
+        showNotification('密码长度至少为6位', 'error');
+        return false;
+    }
+    
+    if (useBackendAPI && api) {
+        try {
+            const newUser = await api.createUser(name.trim(), password);
+            users.push(newUser);
+            saveUsers();
+            renderUserList();
+            showNotification('注册成功，请登录', 'success');
+            return true;
+        } catch (error) {
+            console.error('注册失败:', error);
+            showNotification('注册失败: ' + (error.message || '未知错误'), 'error');
+            return false;
+        }
+    } else {
+        showNotification('后端API不可用，无法注册', 'error');
+        return false;
+    }
 }
 
 // 删除用户（全局函数，供HTML调用）
@@ -3438,9 +3513,22 @@ function renderUserList() {
 function setupUserManagement() {
     const userSwitchBtn = document.getElementById('userSwitchBtn');
     const userManageModal = document.getElementById('userManageModal');
+    const addUserModal = document.getElementById('addUserModal');
     const closeUserManageModal = document.getElementById('closeUserManageModal');
+    const closeAddUserModal = document.getElementById('closeAddUserModal');
+    const showAddUserModalBtn = document.getElementById('showAddUserModalBtn');
     const addUserForm = document.getElementById('addUserForm');
     const cancelAddUser = document.getElementById('cancelAddUser');
+    const loginModal = document.getElementById('loginModal');
+    const registerModal = document.getElementById('registerModal');
+    const closeLoginModal = document.getElementById('closeLoginModal');
+    const closeRegisterModal = document.getElementById('closeRegisterModal');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const cancelLogin = document.getElementById('cancelLogin');
+    const cancelRegister = document.getElementById('cancelRegister');
+    const showRegisterLink = document.getElementById('showRegisterLink');
+    const showLoginLink = document.getElementById('showLoginLink');
     
     // 打开用户管理模态框
     if (userSwitchBtn) {
@@ -3448,6 +3536,18 @@ function setupUserManagement() {
             renderUserList();
             if (userManageModal) {
                 userManageModal.style.display = 'flex';
+            }
+        });
+    }
+    
+    // 打开添加用户模态框
+    if (showAddUserModalBtn) {
+        showAddUserModalBtn.addEventListener('click', () => {
+            if (userManageModal) {
+                userManageModal.style.display = 'none';
+            }
+            if (addUserModal) {
+                addUserModal.style.display = 'flex';
             }
         });
     }
@@ -3461,6 +3561,15 @@ function setupUserManagement() {
         });
     }
     
+    // 关闭添加用户模态框
+    if (closeAddUserModal) {
+        closeAddUserModal.addEventListener('click', () => {
+            if (addUserModal) {
+                addUserModal.style.display = 'none';
+            }
+        });
+    }
+    
     if (cancelAddUser) {
         cancelAddUser.addEventListener('click', (e) => {
             e.preventDefault();
@@ -3468,39 +3577,174 @@ function setupUserManagement() {
             if (addUserForm) {
                 addUserForm.reset();
             }
-            // 关闭模态框
-            if (userManageModal) {
-                userManageModal.style.display = 'none';
+            if (addUserModal) {
+                addUserModal.style.display = 'none';
             }
         });
     }
     
     // 添加用户表单
     if (addUserForm) {
-        addUserForm.addEventListener('submit', (e) => {
+        addUserForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nameInput = document.getElementById('newUserName');
-            if (nameInput && addUser(nameInput.value)) {
-                nameInput.value = '';
+            const passwordInput = document.getElementById('newUserPassword');
+            const passwordConfirmInput = document.getElementById('newUserPasswordConfirm');
+            
+            if (nameInput && passwordInput && passwordConfirmInput) {
+                if (passwordInput.value !== passwordConfirmInput.value) {
+                    showNotification('两次输入的密码不一致', 'error');
+                    return;
+                }
+                
+                if (await addUser(nameInput.value, passwordInput.value)) {
+                    addUserForm.reset();
+                    if (addUserModal) {
+                        addUserModal.style.display = 'none';
+                    }
+                    // 重新显示用户管理弹窗
+                    if (userManageModal) {
+                        userManageModal.style.display = 'flex';
+                        renderUserList();
+                    }
+                }
+            }
+        });
+    }
+    
+    // 打开登录模态框
+    function openLoginModal() {
+        if (loginModal) {
+            loginModal.style.display = 'flex';
+        }
+    }
+    
+    // 打开注册模态框
+    function openRegisterModal() {
+        if (registerModal) {
+            registerModal.style.display = 'flex';
+        }
+    }
+    
+    // 关闭模态框的通用函数
+    function closeModal(modal) {
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    // 关闭登录模态框
+    if (closeLoginModal) {
+        closeLoginModal.addEventListener('click', () => closeModal(loginModal));
+    }
+    
+    // 关闭注册模态框
+    if (closeRegisterModal) {
+        closeRegisterModal.addEventListener('click', () => closeModal(registerModal));
+    }
+    
+    // 取消按钮
+    if (cancelLogin) {
+        cancelLogin.addEventListener('click', () => {
+            if (loginForm) {
+                loginForm.reset();
+            }
+            closeModal(loginModal);
+        });
+    }
+    
+    if (cancelRegister) {
+        cancelRegister.addEventListener('click', () => {
+            if (registerForm) {
+                registerForm.reset();
+            }
+            closeModal(registerModal);
+        });
+    }
+    
+    // 显示注册链接
+    if (showRegisterLink) {
+        showRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeModal(loginModal);
+            openRegisterModal();
+        });
+    }
+    
+    // 显示登录链接
+    if (showLoginLink) {
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeModal(registerModal);
+            openLoginModal();
+        });
+    }
+    
+    // 登录表单
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nameInput = document.getElementById('loginUserName');
+            const passwordInput = document.getElementById('loginPassword');
+            if (nameInput && passwordInput) {
+                if (await loginUser(nameInput.value, passwordInput.value)) {
+                    loginForm.reset();
+                    closeModal(loginModal);
+                    // 重新加载数据
+                    await loadAllUserData();
+                    renderLinks();
+                }
+            }
+        });
+    }
+    
+    // 注册表单
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nameInput = document.getElementById('registerUserName');
+            const passwordInput = document.getElementById('registerPassword');
+            const passwordConfirmInput = document.getElementById('registerPasswordConfirm');
+            
+            if (nameInput && passwordInput && passwordConfirmInput) {
+                if (passwordInput.value !== passwordConfirmInput.value) {
+                    showNotification('两次输入的密码不一致', 'error');
+                    return;
+                }
+                
+                if (await registerUser(nameInput.value, passwordInput.value)) {
+                    registerForm.reset();
+                    closeModal(registerModal);
+                    openLoginModal();
+                }
             }
         });
     }
     
     // 点击背景关闭
-    if (userManageModal) {
-        userManageModal.addEventListener('click', (e) => {
-            if (e.target === userManageModal) {
-                userManageModal.style.display = 'none';
-            }
-        });
-        
-        // 阻止模态框内容区域的点击事件冒泡
-        const modalContent = userManageModal.querySelector('.modal-content');
-        if (modalContent) {
-            modalContent.addEventListener('click', (e) => {
-                e.stopPropagation();
+    [userManageModal, addUserModal, loginModal, registerModal].forEach(modal => {
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal);
+                }
             });
+            
+            // 阻止模态框内容区域的点击事件冒泡
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
         }
+    });
+    
+    // 如果使用后端API且没有当前用户，显示登录弹窗
+    if (useBackendAPI && api && !currentUserId) {
+        setTimeout(() => {
+            openLoginModal();
+        }, 500);
     }
 }
 

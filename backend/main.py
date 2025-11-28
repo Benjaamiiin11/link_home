@@ -93,12 +93,31 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 
 @app.post(API_PREFIX + "/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """创建新用户"""
+    """创建新用户（注册）"""
     # 检查用户名是否已存在
     db_user = crud.get_user_by_name(db, name=user.name)
     if db_user:
         raise HTTPException(status_code=400, detail="用户名已存在")
+    
+    # 验证密码（必填）
+    if not user.password or len(user.password) < 6:
+        raise HTTPException(status_code=400, detail="密码长度至少为6位")
     return crud.create_user(db=db, user=user)
+
+@app.post(API_PREFIX + "/auth/login", response_model=schemas.LoginResponse)
+def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    """用户登录"""
+    user = crud.authenticate_user(db, credentials.name, credentials.password)
+    if not user:
+        return schemas.LoginResponse(
+            success=False,
+            message="用户名或密码错误"
+        )
+    return schemas.LoginResponse(
+        success=True,
+        user=user,
+        message="登录成功"
+    )
 
 @app.delete(API_PREFIX + "/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)):

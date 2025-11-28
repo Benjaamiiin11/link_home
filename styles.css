@@ -2291,6 +2291,25 @@ body {
     color: var(--text-primary);
 }
 
+.form-footer {
+    margin-top: 16px;
+    text-align: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.form-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.form-footer a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
 .form-group input::placeholder,
 .form-group textarea::placeholder {
     color: var(--text-tertiary);

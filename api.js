@@ -82,12 +82,22 @@ class LinkPortalAPI {
     }
 
     /**
-     * 创建用户
+     * 创建用户（注册）
      */
-    async createUser(name) {
+    async createUser(name, password) {
         return this.request('/users', {
             method: 'POST',
-            body: { name }
+            body: { name, password }
+        });
+    }
+
+    /**
+     * 用户登录
+     */
+    async login(name, password) {
+        return this.request('/auth/login', {
+            method: 'POST',
+            body: { name, password }
         });
     }
 

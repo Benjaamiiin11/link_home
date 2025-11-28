@@ -774,6 +774,78 @@
     <!-- 书签导入文件输入（隐藏） -->
     <input type="file" id="bookmarkFileInput" accept=".html" style="display: none;">
 
+    <!-- 登录模态框 -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>用户登录</h2>
+                <button class="modal-close" id="closeLoginModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="loginForm" class="user-form">
+                    <div class="form-group">
+                        <label for="loginUserName">用户名</label>
+                        <input type="text" id="loginUserName" class="form-input" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">密码</label>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="请输入密码" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit">登录</button>
+                        <button type="button" class="btn-cancel" id="cancelLogin">取消</button>
+                    </div>
+                    <div class="form-footer">
+                        <a href="#" id="showRegisterLink">还没有账号？立即注册</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div class="modal-overlay" id="registerModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>用户注册</h2>
+                <button class="modal-close" id="closeRegisterModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="registerForm" class="user-form">
+                    <div class="form-group">
+                        <label for="registerUserName">用户名</label>
+                        <input type="text" id="registerUserName" class="form-input" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">密码</label>
+                        <input type="password" id="registerPassword" class="form-input" placeholder="至少6位密码" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">确认密码</label>
+                        <input type="password" id="registerPasswordConfirm" class="form-input" placeholder="请再次输入密码" required minlength="6">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit">注册</button>
+                        <button type="button" class="btn-cancel" id="cancelRegister">取消</button>
+                    </div>
+                    <div class="form-footer">
+                        <a href="#" id="showLoginLink">已有账号？立即登录</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- 用户管理模态框 -->
     <div class="modal-overlay" id="userManageModal">
         <div class="modal-content modal-medium">
@@ -788,24 +860,49 @@
             </div>
             <div class="modal-body">
                 <div class="user-list-section">
-                    <h3>用户列表</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="margin: 0;">用户列表</h3>
+                        <button class="btn-submit" id="showAddUserModalBtn">添加新用户</button>
+                    </div>
                     <div id="userList" class="user-list">
                         <!-- 用户列表将在这里动态生成 -->
                     </div>
                 </div>
-                <div class="add-user-section">
-                    <h3>添加新用户</h3>
-                    <form id="addUserForm" class="user-form">
-                        <div class="form-group">
-                            <label for="newUserName">用户名</label>
-                            <input type="text" id="newUserName" class="form-input" placeholder="请输入用户名" required>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn-submit">添加用户</button>
-                            <button type="button" class="btn-cancel" id="cancelAddUser">取消</button>
-                        </div>
-                    </form>
-                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加用户模态框 -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>添加新用户</h2>
+                <button class="modal-close" id="closeAddUserModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm" class="user-form">
+                    <div class="form-group">
+                        <label for="newUserName">用户名</label>
+                        <input type="text" id="newUserName" class="form-input" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newUserPassword">密码</label>
+                        <input type="password" id="newUserPassword" class="form-input" placeholder="至少6位密码" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="newUserPasswordConfirm">确认密码</label>
+                        <input type="password" id="newUserPasswordConfirm" class="form-input" placeholder="请再次输入密码" required minlength="6">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit">添加用户</button>
+                        <button type="button" class="btn-cancel" id="cancelAddUser">取消</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

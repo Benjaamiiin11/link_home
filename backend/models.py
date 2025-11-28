@@ -9,6 +9,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(100), nullable=False, unique=True, index=True)
+    password_hash = Column(String(255), nullable=True)  # 密码哈希，可为空以兼容旧用户
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     

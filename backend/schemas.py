@@ -7,7 +7,11 @@ class UserBase(BaseModel):
     name: str
 
 class UserCreate(UserBase):
-    pass
+    password: str  # 密码为必填
+
+class UserLogin(BaseModel):
+    name: str
+    password: str
 
 class UserResponse(UserBase):
     id: int
@@ -16,6 +20,11 @@ class UserResponse(UserBase):
     
     class Config:
         from_attributes = True
+
+class LoginResponse(BaseModel):
+    success: bool
+    user: Optional[UserResponse] = None
+    message: str
 
 # 链接相关
 class LinkBase(BaseModel):

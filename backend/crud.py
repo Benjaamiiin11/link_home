@@ -3,6 +3,7 @@ from sqlalchemy import and_, or_
 from typing import List, Optional
 from models import User, Link, Category, UserSettings, AccessHistory
 import schemas
+import bcrypt
 
 # ========== 用户相关 ==========
 def get_user(db: Session, user_id: int):
@@ -15,13 +16,36 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
 
 def create_user(db: Session, user: schemas.UserCreate):
-    db_user = User(name=user.name)
+    # 密码为必填，进行哈希处理
+    password_hash = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    db_user = User(name=user.name, password_hash=password_hash)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     # 创建默认设置
     create_user_settings(db, db_user.id)
     return db_user
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码"""
+    if not hashed_password:
+        return False
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+def authenticate_user(db: Session, name: str, password: str):
+    """验证用户登录"""
+    user = get_user_by_name(db, name)
+    if not user:
+        return None
+    if not user.password_hash:
+        return None  # 旧用户没有密码，需要设置密码
+    if verify_password(password, user.password_hash):
+        return user
+    return None
 
 def delete_user(db: Session, user_id: int):
     db_user = get_user(db, user_id)
