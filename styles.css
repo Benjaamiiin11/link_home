@@ -2366,6 +2366,29 @@ body {
     padding: 24px;
 }
 
+/* 链接表单双栏布局 */
+#linkForm {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+#linkForm .form-group {
+    margin-bottom: 0;
+}
+
+/* 全宽字段（跨两列） */
+#linkForm .form-group-full {
+    grid-column: 1 / -1;
+}
+
+/* 表单操作按钮区域 */
+#linkForm .form-actions {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+    margin-bottom: 0;
+}
+
 .modal-body {
     padding: 24px;
 }
