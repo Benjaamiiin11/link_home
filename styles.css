@@ -109,6 +109,27 @@ body {
 .header-left {
     flex: 1;
     text-align: center;
+    position: relative;
+    padding-left: 120px; 
+}
+
+.header-content {
+    display: inline-block;
+    position: relative;
+}
+
+.title-wrapper {
+    position: relative;
+    display: block;
+    margin-bottom: 10px;
+    padding-right: 45px; /* 为编辑按钮留出空间 */
+}
+
+.subtitle-wrapper {
+    position: relative;
+    display: block;
+    margin-top: 0;
+    padding-right: 45px; /* 为编辑按钮留出空间 */
 }
 
 .header-right {
@@ -172,10 +193,113 @@ body {
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
+.title-edit-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.title-wrapper:hover .title-edit-btn,
+.title-edit-btn:hover {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.title-edit-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.subtitle-edit-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.subtitle-wrapper:hover .subtitle-edit-btn,
+.subtitle-edit-btn:hover {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.subtitle-edit-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.subtitle-edit-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.dark-mode .subtitle-edit-btn {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-mode .subtitle-edit-btn:hover {
+    background: var(--bg-color);
+    border-color: var(--primary-color);
+}
+
+.title-edit-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.dark-mode .title-edit-btn {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-mode .title-edit-btn:hover {
+    background: var(--bg-color);
+    border-color: var(--primary-color);
+}
+
 .subtitle {
     font-size: 1.2rem;
     opacity: 0.9;
     font-weight: 300;
+    margin: 0;
 }
 
 .dark-mode .subtitle {
@@ -2295,7 +2419,6 @@ body {
     margin-top: 16px;
     text-align: center;
     padding-top: 16px;
-    border-top: 1px solid var(--border-color);
 }
 
 .form-footer a {
@@ -2686,10 +2809,9 @@ body {
 .form-actions {
     display: flex;
     gap: 12px;
-    justify-content: flex-end;
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border-color);
+    justify-content: center;
+    margin-top: 12px;
+    padding-top: 12px;
 }
 
 .btn-cancel,

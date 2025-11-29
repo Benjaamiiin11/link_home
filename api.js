@@ -4,7 +4,18 @@
  */
 
 class LinkPortalAPI {
-    constructor(baseURL = 'http://localhost:8081/api/v1') {
+    constructor(baseURL = null) {
+        // 如果没有提供 baseURL，自动根据当前访问的域名构建
+        if (!baseURL) {
+            const hostname = window.location.hostname;
+            // 如果访问的是 localhost 或 127.0.0.1，使用 localhost:8081
+            // 否则使用相同的 hostname，端口为 8081
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                baseURL = 'http://localhost:8081/api/v1';
+            } else {
+                baseURL = `http://${hostname}:8081/api/v1`;
+            }
+        }
         this.baseURL = baseURL;
         this.currentUserId = null;
     }

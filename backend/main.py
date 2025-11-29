@@ -23,16 +23,26 @@ app = FastAPI(
 # 配置 CORS - 必须在所有路由之前
 # 注意：如果使用 allow_credentials=True，不能使用 allow_origins=["*"]
 # 必须明确指定允许的来源
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# 从环境变量读取允许的来源，如果没有则使用默认列表
+allowed_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    # 从环境变量读取，支持逗号分隔的多个来源
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+else:
+    # 默认允许的来源
+    allowed_origins = [
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
-    ],
+        "http://100.64.0.10:3001",  # 添加内网 IP 支持
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],

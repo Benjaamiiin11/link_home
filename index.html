@@ -21,8 +21,26 @@
     <div class="container">
         <header class="header">
             <div class="header-left">
-                <h1 class="title">我的链接门户</h1>
-                <p class="subtitle">快速访问常用网站</p>
+                <div class="header-content">
+                    <div class="title-wrapper">
+                        <h1 class="title">我的链接门户</h1>
+                        <button class="title-edit-btn" id="titleEditBtn" title="编辑标题">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="subtitle-wrapper">
+                        <p class="subtitle">快速访问常用网站</p>
+                        <button class="subtitle-edit-btn" id="subtitleEditBtn" title="编辑副标题">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="header-right">
                 <button class="user-switch-btn" id="userSwitchBtn" title="切换用户">
@@ -504,6 +522,26 @@
                 </div>
                 
                 <div class="data-actions">
+                    <div class="action-section">
+                        <h3>页面设置</h3>
+                        <p class="section-desc">自定义页面标题</p>
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label for="pageTitleInput">页面标题</label>
+                            <input type="text" id="pageTitleInput" class="form-input" placeholder="我的链接门户" style="max-width: 400px;">
+                            <small style="display: block; margin-top: 8px; color: var(--text-tertiary);">
+                                设置后，页面标题和浏览器标签页标题将更新
+                            </small>
+                        </div>
+                        <button class="action-primary-btn" id="savePageTitleBtn" style="margin-top: 12px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            保存标题
+                        </button>
+                    </div>
+                    
                     <div class="action-section">
                         <h3>导出数据</h3>
                         <p class="section-desc">将您的所有数据导出为文件，用于备份或迁移</p>

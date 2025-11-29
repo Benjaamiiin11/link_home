@@ -20,11 +20,22 @@ let customTheme = null; // 自定义主题 {primaryColor, gradientStart, gradien
 let accessHistory = []; // 访问历史 [{url, name, timestamp}]
 
 // 多用户管理
-let users = []; // 用户列表 [{id, name, createdAt}]
+let users = []; // 已登录的用户列表 [{id, name, createdAt}] - 只包含已登录过的用户
 let currentUserId = null; // 当前用户ID
 
 // API 配置
-const API_BASE_URL = 'http://localhost:8081/api/v1'; // 根据你的后端端口修改
+// 自动根据当前访问的域名构建 API 地址
+function getAPIBaseURL() {
+    const hostname = window.location.hostname;
+    // 如果访问的是 localhost 或 127.0.0.1，使用 localhost:8081
+    // 否则使用相同的 hostname，端口为 8081
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:8081/api/v1';
+    } else {
+        return `http://${hostname}:8081/api/v1`;
+    }
+}
+const API_BASE_URL = getAPIBaseURL();
 let api = null; // API 实例
 let useBackendAPI = false; // 是否使用后端 API（自动检测）
 
@@ -32,7 +43,7 @@ let useBackendAPI = false; // 是否使用后端 API（自动检测）
 async function initAPI() {
     if (typeof LinkPortalAPI !== 'undefined') {
         try {
-            api = new LinkPortalAPI(API_BASE_URL);
+            api = new LinkPortalAPI(); // 使用自动检测的 baseURL
             // 快速测试连接（1秒超时）
             try {
                 const controller = new AbortController();
@@ -86,16 +97,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 并行加载不相互依赖的数据
         await Promise.all([
             loadLinksOrder(),
-            loadCustomCategories(),
-            loadFavoriteLinks(),
-            loadAccessHistory()
-        ]);
-        
-        // 同步加载（依赖前面的数据或不需要异步）
-        loadCategoryFolders();
-        loadDarkMode();
-        loadAllTags();
-        loadCustomTheme();
+        loadCustomCategories(),
+        loadFavoriteLinks(),
+        loadAccessHistory()
+    ]);
+    
+    // 同步加载（依赖前面的数据或不需要异步）
+    loadCategoryFolders();
+    loadDarkMode();
+    loadAllTags();
+    loadCustomTheme();
+    loadPageTitle(); // 加载页面标题
         
         // 确保数据已加载（数据应该从数据库或 localStorage 加载）
         if (!allLinks || allLinks.length === 0) {
@@ -122,6 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupAccessHistory();
         setupPasteImport(); // 设置粘贴导入
         showContextMenu = setupContextMenu(); // 设置右键菜单
+        setupTitleEdit(); // 设置标题编辑
     } catch (error) {
         console.error('初始化失败:', error);
     } finally {
@@ -2214,6 +2227,23 @@ function setupModal() {
         closeDataModal.addEventListener('click', closeDataManageModal);
     }
     
+    // 保存页面标题按钮
+    const savePageTitleBtn = document.getElementById('savePageTitleBtn');
+    if (savePageTitleBtn) {
+        savePageTitleBtn.addEventListener('click', async () => {
+            const pageTitleInput = document.getElementById('pageTitleInput');
+            if (pageTitleInput) {
+                const newTitle = pageTitleInput.value.trim();
+                if (newTitle) {
+                    await savePageTitle(newTitle);
+                    showNotification('页面标题已更新', 'success');
+                } else {
+                    showNotification('页面标题不能为空', 'error');
+                }
+            }
+        });
+    }
+    
     // 点击背景关闭
     const dataManageModal = document.getElementById('dataManageModal');
     if (dataManageModal) {
@@ -2908,6 +2938,14 @@ async function loadCustomCategories() {
 // 打开数据管理模态框
 function openDataManageModal() {
     updateDataInfo();
+    // 加载当前页面标题到输入框
+    const pageTitleInput = document.getElementById('pageTitleInput');
+    if (pageTitleInput) {
+        const titleElement = document.querySelector('.header-left .title');
+        if (titleElement) {
+            pageTitleInput.value = titleElement.textContent || '我的链接门户';
+        }
+    }
     document.getElementById('dataManageModal').style.display = 'flex';
 }
 
@@ -3089,34 +3127,7 @@ function getUserStorageKey(key) {
 
 // 初始化用户系统
 async function initializeUserSystem() {
-    if (useBackendAPI && api) {
-        try {
-            // 从后端获取用户列表
-            users = await api.getUsers();
-            if (users.length === 0) {
-                // 创建默认用户
-                const defaultUser = await api.createUser('默认用户');
-                users = [defaultUser];
-            }
-            // 使用第一个用户
-            currentUserId = users[0].id;
-            api.setCurrentUserId(currentUserId);
-            updateUserUI();
-            return;
-        } catch (error) {
-            console.error('从后端加载用户失败:', error);
-            console.error('错误详情:', error.message || error.toString());
-            // 只有在明确是连接错误时才回退
-            if (error.message && error.message.includes('fetch')) {
-                useBackendAPI = false;
-            } else {
-                // 其他错误（如服务器错误）不立即回退，让用户知道问题
-                console.error('后端API错误，但继续尝试使用API');
-            }
-        }
-    }
-    
-    // 使用 localStorage（原有逻辑）
+    // 从 localStorage 加载已登录过的用户列表（不获取所有用户）
     const savedUsers = localStorage.getItem('users');
     if (savedUsers) {
         try {
@@ -3127,32 +3138,54 @@ async function initializeUserSystem() {
         }
     }
     
-    // 如果没有用户，创建默认用户
-    if (users.length === 0) {
-        const defaultUser = {
-            id: 'user_' + Date.now(),
-            name: '默认用户',
-            createdAt: new Date().toISOString()
-        };
-        users = [defaultUser];
-        saveUsers();
-    }
-    
     // 加载当前用户ID
     const savedCurrentUserId = localStorage.getItem('currentUserId');
-    if (savedCurrentUserId && users.find(u => u.id === savedCurrentUserId)) {
-        currentUserId = savedCurrentUserId;
-    } else {
-        // 使用第一个用户
-        currentUserId = users[0].id;
-        saveCurrentUserId();
+    let targetUser = null;
+    
+    // 优先使用保存的用户ID
+    if (savedCurrentUserId) {
+        targetUser = users.find(u => u.id === savedCurrentUserId);
     }
     
-    // 迁移旧数据到当前用户（如果存在旧数据且当前用户没有数据）
-    migrateOldData();
+    // 如果没有保存的用户ID，但用户列表中有用户，使用第一个用户（如admin）
+    if (!targetUser && users.length > 0) {
+        targetUser = users[0];
+    }
     
-    // 更新用户界面
-    updateUserUI();
+    if (targetUser) {
+        // 有用户可用，直接进入
+        currentUserId = targetUser.id;
+        if (useBackendAPI && api) {
+            api.setCurrentUserId(currentUserId);
+        }
+        saveCurrentUserId(); // 保存当前用户ID
+        // 迁移旧数据到当前用户（如果存在旧数据且当前用户没有数据）
+        migrateOldData();
+        // 更新用户界面
+        updateUserUI();
+    } else {
+        // 完全没有用户，显示登录弹窗
+        if (useBackendAPI && api) {
+            setTimeout(() => {
+                if (window.openLoginModal) {
+                    window.openLoginModal();
+                }
+            }, 500);
+        } else {
+            // localStorage 模式：创建默认用户
+            const defaultUser = {
+                id: 'user_' + Date.now(),
+                name: '默认用户',
+                createdAt: new Date().toISOString()
+            };
+            users = [defaultUser];
+            saveUsers();
+            currentUserId = users[0].id;
+            saveCurrentUserId();
+            migrateOldData();
+            updateUserUI();
+        }
+    }
 }
 
 // 迁移旧数据到当前用户
@@ -3245,9 +3278,10 @@ async function loginUser(name, password) {
         try {
             const result = await api.login(name, password);
             if (result.success && result.user) {
-                // 检查用户是否在列表中
+                // 检查用户是否已在已登录用户列表中
                 let user = users.find(u => u.id === result.user.id || u.name === result.user.name);
                 if (!user) {
+                    // 只有登录成功后，才将用户添加到已登录用户列表
                     users.push(result.user);
                     saveUsers();
                 }
@@ -3274,7 +3308,7 @@ async function loginUser(name, password) {
 
 // 用户注册
 async function registerUser(name, password) {
-    if (!name || name.trim()) {
+    if (!name || !name.trim()) {
         showNotification('用户名不能为空', 'error');
         return false;
     }
@@ -3461,6 +3495,7 @@ async function loadAllUserData() {
     await loadFavoriteLinks();
     loadAllTags();
     await loadAccessHistory();
+    await loadPageTitle(); // 加载页面标题
     
     // 重新初始化
     initializeCategories();
@@ -3529,6 +3564,7 @@ function setupUserManagement() {
     const cancelRegister = document.getElementById('cancelRegister');
     const showRegisterLink = document.getElementById('showRegisterLink');
     const showLoginLink = document.getElementById('showLoginLink');
+    const showRegisterFromLoginBtn = document.getElementById('showRegisterFromLoginBtn');
     
     // 打开用户管理模态框
     if (userSwitchBtn) {
@@ -3540,15 +3576,14 @@ function setupUserManagement() {
         });
     }
     
-    // 打开添加用户模态框
+    // 打开添加用户模态框 - 改为打开登录弹窗
     if (showAddUserModalBtn) {
         showAddUserModalBtn.addEventListener('click', () => {
             if (userManageModal) {
                 userManageModal.style.display = 'none';
             }
-            if (addUserModal) {
-                addUserModal.style.display = 'flex';
-            }
+            // 打开登录弹窗而不是添加用户弹窗
+            openLoginModal();
         });
     }
     
@@ -3612,19 +3647,25 @@ function setupUserManagement() {
         });
     }
     
-    // 打开登录模态框
-    function openLoginModal() {
+    // 打开登录模态框（全局函数）
+    window.openLoginModal = function() {
+        const loginModal = document.getElementById('loginModal');
         if (loginModal) {
             loginModal.style.display = 'flex';
         }
-    }
+    };
     
-    // 打开注册模态框
-    function openRegisterModal() {
+    // 打开注册模态框（全局函数）
+    window.openRegisterModal = function() {
+        const registerModal = document.getElementById('registerModal');
         if (registerModal) {
             registerModal.style.display = 'flex';
         }
-    }
+    };
+    
+    // 为了向后兼容，在函数内部也定义局部变量
+    const openLoginModal = window.openLoginModal;
+    const openRegisterModal = window.openRegisterModal;
     
     // 关闭模态框的通用函数
     function closeModal(modal) {
@@ -3677,6 +3718,15 @@ function setupUserManagement() {
             e.preventDefault();
             closeModal(registerModal);
             openLoginModal();
+        });
+    }
+    
+    // 从登录弹窗打开注册弹窗（添加新用户按钮）
+    if (showRegisterFromLoginBtn) {
+        showRegisterFromLoginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeModal(loginModal);
+            openRegisterModal();
         });
     }
     
@@ -3743,7 +3793,9 @@ function setupUserManagement() {
     // 如果使用后端API且没有当前用户，显示登录弹窗
     if (useBackendAPI && api && !currentUserId) {
         setTimeout(() => {
-            openLoginModal();
+            if (window.openLoginModal) {
+                window.openLoginModal();
+            }
         }, 500);
     }
 }
@@ -4350,6 +4402,289 @@ async function loadFavoriteLinks() {
             favoriteLinks = new Set();
         }
     }
+}
+
+// 加载页面标题
+async function loadPageTitle() {
+    let pageTitle = '我的链接门户';
+    let pageSubtitle = '快速访问常用网站';
+    
+    if (useBackendAPI && api && currentUserId) {
+        try {
+            const settings = await api.getUserSettings(currentUserId);
+            if (settings.page_title) {
+                pageTitle = settings.page_title;
+            }
+            if (settings.page_subtitle) {
+                pageSubtitle = settings.page_subtitle;
+            }
+        } catch (error) {
+            console.error('从后端加载页面标题失败，使用 localStorage:', error);
+        }
+    }
+    
+    // 使用 localStorage（原有逻辑）
+    const savedTitle = localStorage.getItem(getUserStorageKey('pageTitle'));
+    if (savedTitle) {
+        try {
+            pageTitle = JSON.parse(savedTitle);
+        } catch (e) {
+            console.error('加载页面标题失败:', e);
+        }
+    }
+    
+    const savedSubtitle = localStorage.getItem(getUserStorageKey('pageSubtitle'));
+    if (savedSubtitle) {
+        try {
+            pageSubtitle = JSON.parse(savedSubtitle);
+        } catch (e) {
+            console.error('加载副标题失败:', e);
+        }
+    }
+    
+    // 更新页面标题和副标题
+    updatePageTitle(pageTitle);
+    updatePageSubtitle(pageSubtitle);
+}
+
+// 更新页面副标题显示
+function updatePageSubtitle(subtitle) {
+    const subtitleElement = document.querySelector('.header-left .subtitle');
+    if (subtitleElement) {
+        subtitleElement.textContent = subtitle;
+    }
+}
+
+// 保存页面标题
+async function savePageTitle(title) {
+    if (!title || title.trim() === '') {
+        title = '我的链接门户';
+    }
+    
+    // 保存到 localStorage
+    localStorage.setItem(getUserStorageKey('pageTitle'), JSON.stringify(title));
+    
+    // 保存到后端
+    if (useBackendAPI && api && currentUserId) {
+        try {
+            await api.updateUserSettings(currentUserId, {
+                page_title: title
+            });
+        } catch (error) {
+            console.error('保存页面标题到数据库失败:', error);
+            // 不抛出错误，因为 localStorage 已经保存了
+        }
+    }
+    
+    // 更新页面标题
+    updatePageTitle(title);
+}
+
+// 更新页面标题显示
+function updatePageTitle(title) {
+    // 更新 HTML title 标签
+    document.title = `${title} - Link Portal`;
+    
+    // 更新页面上的 h1 标题
+    const titleElement = document.querySelector('.header-left .title');
+    if (titleElement) {
+        titleElement.textContent = title;
+    }
+}
+
+// 设置标题编辑功能
+function setupTitleEdit() {
+    const titleEditBtn = document.getElementById('titleEditBtn');
+    const titleElement = document.querySelector('.header-left .title');
+    
+    if (!titleEditBtn || !titleElement) return;
+    
+    titleEditBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editTitleInline();
+    });
+    
+    // 设置副标题编辑功能
+    const subtitleEditBtn = document.getElementById('subtitleEditBtn');
+    const subtitleElement = document.querySelector('.header-left .subtitle');
+    
+    if (subtitleEditBtn && subtitleElement) {
+        subtitleEditBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editSubtitleInline();
+        });
+    }
+}
+
+// 内联编辑标题
+function editTitleInline() {
+    const titleElement = document.querySelector('.header-left .title');
+    if (!titleElement) return;
+    
+    const currentTitle = titleElement.textContent;
+    const titleWrapper = titleElement.parentElement;
+    
+    // 创建输入框
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentTitle;
+    input.className = 'title-edit-input';
+    // 检测是否为深色模式
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    const bgColor = isDarkMode ? 'var(--card-bg)' : 'rgba(255, 255, 255, 0.2)';
+    const borderColor = isDarkMode ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.5)';
+    const textColor = isDarkMode ? 'var(--text-primary)' : 'white';
+    
+    input.style.cssText = `
+        font-size: 3rem;
+        font-weight: 700;
+        background: ${bgColor};
+        backdrop-filter: blur(10px);
+        border: 2px solid ${borderColor};
+        border-radius: 8px;
+        padding: 8px 16px;
+        color: ${textColor};
+        text-align: center;
+        width: 100%;
+        max-width: 600px;
+        outline: none;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        font-family: inherit;
+    `;
+    
+    // 替换标题为输入框
+    titleElement.style.display = 'none';
+    titleWrapper.insertBefore(input, titleElement);
+    input.focus();
+    input.select();
+    
+    // 保存函数
+    const saveTitle = async () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== currentTitle) {
+            await savePageTitle(newTitle);
+            showNotification('页面标题已更新', 'success');
+        }
+        // 恢复标题显示
+        titleElement.textContent = newTitle || currentTitle;
+        titleElement.style.display = '';
+        input.remove();
+    };
+    
+    // 取消函数
+    const cancelEdit = () => {
+        titleElement.style.display = '';
+        input.remove();
+    };
+    
+    // 回车保存
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTitle();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit();
+        }
+    });
+    
+    // 失去焦点时保存
+    input.addEventListener('blur', () => {
+        saveTitle();
+    });
+}
+
+// 内联编辑副标题
+function editSubtitleInline() {
+    const subtitleElement = document.querySelector('.header-left .subtitle');
+    if (!subtitleElement) return;
+    
+    const currentSubtitle = subtitleElement.textContent;
+    const subtitleWrapper = subtitleElement.parentElement;
+    
+    // 创建输入框
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentSubtitle;
+    input.className = 'subtitle-edit-input';
+    
+    // 检测是否为深色模式
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    const bgColor = isDarkMode ? 'var(--card-bg)' : 'rgba(255, 255, 255, 0.2)';
+    const borderColor = isDarkMode ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.5)';
+    const textColor = isDarkMode ? 'var(--text-primary)' : 'white';
+    
+    input.style.cssText = `
+        font-size: 1.2rem;
+        font-weight: 300;
+        background: ${bgColor};
+        backdrop-filter: blur(10px);
+        border: 2px solid ${borderColor};
+        border-radius: 8px;
+        padding: 6px 12px;
+        color: ${textColor};
+        text-align: center;
+        width: 100%;
+        max-width: 400px;
+        outline: none;
+        opacity: 0.9;
+        font-family: inherit;
+    `;
+    
+    // 替换副标题为输入框
+    subtitleElement.style.display = 'none';
+    subtitleWrapper.insertBefore(input, subtitleElement);
+    input.focus();
+    input.select();
+    
+    // 保存函数
+    const saveSubtitle = () => {
+        const newSubtitle = input.value.trim();
+        // 保存到 localStorage
+        localStorage.setItem(getUserStorageKey('pageSubtitle'), JSON.stringify(newSubtitle || currentSubtitle));
+        
+        // 保存到后端
+        if (useBackendAPI && api && currentUserId) {
+            try {
+                api.updateUserSettings(currentUserId, {
+                    page_subtitle: newSubtitle || currentSubtitle
+                }).catch(err => console.error('保存副标题失败:', err));
+            } catch (error) {
+                console.error('保存副标题到数据库失败:', error);
+            }
+        }
+        
+        // 恢复副标题显示
+        subtitleElement.textContent = newSubtitle || currentSubtitle;
+        subtitleElement.style.display = '';
+        input.remove();
+        
+        if (newSubtitle && newSubtitle !== currentSubtitle) {
+            showNotification('副标题已更新', 'success');
+        }
+    };
+    
+    // 取消函数
+    const cancelEdit = () => {
+        subtitleElement.style.display = '';
+        input.remove();
+    };
+    
+    // 回车保存
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveSubtitle();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit();
+        }
+    });
+    
+    // 失去焦点时保存
+    input.addEventListener('blur', () => {
+        saveSubtitle();
+    });
 }
 
 // 设置主题切换

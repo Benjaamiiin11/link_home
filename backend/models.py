@@ -66,6 +66,8 @@ class UserSettings(Base):
     sort_by = Column(String(50), default="custom")
     sort_order = Column(String(10), default="asc")
     current_view = Column(String(10), default="card")
+    page_title = Column(String(200), default="我的链接门户")  # 页面标题
+    page_subtitle = Column(String(200), default="快速访问常用网站")  # 页面副标题
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

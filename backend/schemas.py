@@ -86,6 +86,8 @@ class UserSettingsBase(BaseModel):
     sort_by: str = "custom"
     sort_order: str = "asc"
     current_view: str = "card"
+    page_title: str = "我的链接门户"
+    page_subtitle: str = "快速访问常用网站"
 
 class UserSettingsUpdate(BaseModel):
     favorite_links: Optional[List[str]] = None
@@ -94,6 +96,8 @@ class UserSettingsUpdate(BaseModel):
     sort_by: Optional[str] = None
     sort_order: Optional[str] = None
     current_view: Optional[str] = None
+    page_title: Optional[str] = None
+    page_subtitle: Optional[str] = None
 
 class UserSettingsResponse(UserSettingsBase):
     id: int
