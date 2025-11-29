@@ -2006,6 +2006,41 @@ async function loadLinksOrder() {
                 addTime: link.add_time ? new Date(link.add_time).getTime() : Date.now(),
                 id: link.id // 保存后端返回的 ID
             }));
+            
+            // 尝试从 localStorage 加载保存的顺序
+            try {
+                const savedOrder = localStorage.getItem(getUserStorageKey('linksOrder'));
+                if (savedOrder) {
+                    const parsedOrder = JSON.parse(savedOrder);
+                    if (Array.isArray(parsedOrder) && parsedOrder.length > 0) {
+                        // 按照保存的顺序重新排列
+                        const orderedLinks = [];
+                        const linkMap = new Map(allLinks.map(link => [link.url, link]));
+                        
+                        // 先按保存的顺序添加链接
+                        parsedOrder.forEach(url => {
+                            if (linkMap.has(url)) {
+                                orderedLinks.push(linkMap.get(url));
+                            }
+                        });
+                        
+                        // 添加新链接（后端有但顺序中没有的）
+                        allLinks.forEach(link => {
+                            if (!parsedOrder.includes(link.url)) {
+                                orderedLinks.push(link);
+                            }
+                        });
+                        
+                        allLinks = orderedLinks;
+                    }
+                }
+            } catch (orderError) {
+                console.warn('加载保存的顺序失败，使用后端顺序:', orderError);
+            }
+            
+            // 保存当前顺序到 localStorage（确保同步）
+            saveLinksOrder();
+            
             filteredLinks = [...allLinks];
             return;
         } catch (error) {
