@@ -3502,10 +3502,19 @@ window.switchUser = async function(userId, event) {
         saveCurrentUserId();
     }
     
+    // 立即更新UI（在加载数据之前先更新用户名）
+    updateUserUI();
+    
+    // 关闭用户管理模态框
+    const userManageModal = document.getElementById('userManageModal');
+    if (userManageModal) {
+        userManageModal.style.display = 'none';
+    }
+    
     // 重新加载数据
     await loadAllUserData();
     
-    // 更新UI
+    // 再次更新UI（确保所有内容都更新）
     updateUserUI();
     renderUserList();
     
@@ -3542,8 +3551,13 @@ async function loadAllUserData() {
 function updateUserUI() {
     const currentUser = users.find(u => u.id === currentUserId);
     const userNameEl = document.getElementById('currentUserName');
-    if (userNameEl && currentUser) {
-        userNameEl.textContent = currentUser.name;
+    if (userNameEl) {
+        if (currentUser) {
+            userNameEl.textContent = currentUser.name;
+        } else {
+            // 如果找不到用户，尝试从后端获取或显示默认值
+            userNameEl.textContent = '用户';
+        }
     }
 }
 
